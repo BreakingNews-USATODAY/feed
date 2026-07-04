@@ -89,14 +89,6 @@
         }
         button:hover { background-color: #b71c1c; }
         
-        .btn-info {
-            background-color: #17a2b8;
-            padding: 10px;
-            font-size: 1rem;
-            margin-top: 10px;
-        }
-        .btn-info:hover { background-color: #138496; }
-        
         .copy-btn {
             background-color: #28a745;
             margin-top: 5px;
@@ -131,12 +123,12 @@
 <div class="wrapper">
     <h2>Nice News Content Generator</h2>
     
+    <!-- Modul Setting Redirect URL -->
     <div class="settings-box">
         <h3>⚙️ Pengaturan In-App Redirect</h3>
         <label for="redirect-url">Target Link Custom (Bisa ganti link monetisasi):</label>
-        <input type="text" id="redirect-url" placeholder="Contoh: https://link-anda.com/..." autocomplete="off">
-        <button class="btn-info" onclick="saveRedirectUrl()">💾 Simpan Link ke Browser</button>
-        <div class="note">Default: Menggunakan URL halaman generator saat ini jika dibiarkan kosong. Data disimpan lokal dan tertimpa otomatis jika di-save ulang.</div>
+        <input type="text" id="redirect-url" placeholder="Opsional: https://link-monetisasi-anda.com/..." autocomplete="off">
+        <div class="note"><strong>Otomatis tersimpan.</strong> Jika dikosongkan, script otomatis me-redirect user ke <strong>Link Artikel (Preview)</strong> ini sendiri di browser Chrome.</div>
     </div>
     
     <div class="form-group">
@@ -159,6 +151,7 @@
     </div>
 </div>
 
+<!-- Elemen Toast UI -->
 <div id="toast">Notifikasi</div>
 
 <script>
@@ -169,32 +162,33 @@ let currentRandomCode = "";
 function showToast(message, isSuccess = true, duration = 3000) {
     const toast = document.getElementById("toast");
     toast.textContent = message;
-    toast.style.backgroundColor = isSuccess ? "#28a745" : "#d32f2f"; // Hijau jika sukses, Merah jika error
+    toast.style.backgroundColor = isSuccess ? "#28a745" : "#d32f2f"; 
     toast.className = "show";
     setTimeout(() => { 
         toast.className = toast.className.replace("show", ""); 
     }, duration);
 }
 
-// Inisialisasi Local Storage saat halaman dimuat
+// Fitur Auto-Save Local Storage
 document.addEventListener("DOMContentLoaded", () => {
+    const redirectInput = document.getElementById("redirect-url");
     const savedRedirectUrl = localStorage.getItem("customRedirectUrl");
-    const defaultUrl = window.location.href; // Mengambil link halaman ini
     
-    // Set field redirect url. Jika ada di localStorage pakai itu, jika tidak pakai default.
-    document.getElementById("redirect-url").value = savedRedirectUrl ? savedRedirectUrl : defaultUrl;
-});
-
-// Fungsi Menyimpan Link Custom
-function saveRedirectUrl() {
-    const inputUrl = document.getElementById("redirect-url").value.trim();
-    if(inputUrl) {
-        localStorage.setItem("customRedirectUrl", inputUrl);
-        showToast("Link redirect berhasil disimpan di browser!", true);
-    } else {
-        showToast("Link redirect tidak boleh kosong!", false);
+    // Load data dari storage jika ada
+    if (savedRedirectUrl) {
+        redirectInput.value = savedRedirectUrl;
     }
-}
+
+    // Auto-save tiap kali user mengetik/paste (tanpa notifikasi agar tidak spam)
+    redirectInput.addEventListener("input", function() {
+        localStorage.setItem("customRedirectUrl", this.value.trim());
+    });
+    
+    // Tampilkan notifikasi saat user selesai mengetik (klik diluar input box)
+    redirectInput.addEventListener("change", function() {
+        showToast("Link redirect otomatis disimpan!", true, 2000);
+    });
+});
 
 function generateRandomCode(length) {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -222,24 +216,21 @@ fetch('domain.txt')
         console.log('File domain.txt tidak ditemukan.');
     });
 
-function updatePreviewUrl(h1Text) {
-    if (currentRandomCode) {
-        const fullUrl = baseDomain + currentRandomCode;
-        const shareText = `${h1Text}\n\n${fullUrl}`;
-        
-        const recBox = document.getElementById('rec-box');
-        const sharePreview = document.getElementById('share-preview');
-        
-        sharePreview.value = shareText;
-        recBox.style.display = 'block'; 
-        
-        recBox.style.backgroundColor = '#d4edda';
-        recBox.style.borderLeftColor = '#28a745';
-        setTimeout(() => {
-            recBox.style.backgroundColor = '#fce4e4';
-            recBox.style.borderLeftColor = '#d32f2f';
-        }, 1500);
-    }
+function updatePreviewUrl(h1Text, fullUrl) {
+    const shareText = `${h1Text}\n\n${fullUrl}`;
+    
+    const recBox = document.getElementById('rec-box');
+    const sharePreview = document.getElementById('share-preview');
+    
+    sharePreview.value = shareText;
+    recBox.style.display = 'block'; 
+    
+    recBox.style.backgroundColor = '#d4edda';
+    recBox.style.borderLeftColor = '#28a745';
+    setTimeout(() => {
+        recBox.style.backgroundColor = '#fce4e4';
+        recBox.style.borderLeftColor = '#d32f2f';
+    }, 1500);
 }
 
 function copyPreview() {
@@ -259,17 +250,6 @@ function generateAndDownload() {
     const thumbnailVal = document.getElementById('thumbnail').value.trim();
     const contentInputVal = document.getElementById('content').value.trim();
     
-    // Ambil nilai redirect URL, fallback ke current URL jika dikosongi saat di klik
-    let targetUrl = document.getElementById("redirect-url").value.trim() || window.location.href;
-    
-    // Normalisasi URL Href (harus ada http/https)
-    let hrefUrl = targetUrl;
-    if (!hrefUrl.startsWith('http://') && !hrefUrl.startsWith('https://')) {
-        hrefUrl = 'https://' + hrefUrl;
-    }
-    // Normalisasi URL Intent Android (biasanya hapus protokolnya)
-    let rawTargetUrl = targetUrl.replace(/^https?:\/\//, '');
-    
     if (!thumbnailVal || !contentInputVal) {
         showToast('Mohon isi kolom Link Gambar Thumbnail dan Isi Berita!', false);
         return;
@@ -281,14 +261,27 @@ function generateAndDownload() {
         return;
     }
     
-    // Notifikasi progres dimulai
     showToast("Memproses file HTML...", true, 2000);
     
     const h1Title = lines[0]; 
     const remainingParagraphs = lines.slice(1);
     
+    // Generate Random Code dan Link Review Artikel
     currentRandomCode = generateRandomCode(12);
-    updatePreviewUrl(h1Title); 
+    const articleFullUrl = baseDomain + currentRandomCode;
+    updatePreviewUrl(h1Title, articleFullUrl); 
+    
+    // Ambil nilai redirect URL, jika kosong, gunakan link artikel yang baru saja dibuat
+    let customInputUrl = document.getElementById("redirect-url").value.trim();
+    let targetUrl = customInputUrl ? customInputUrl : articleFullUrl;
+    
+    // Normalisasi URL Href (harus ada http/https)
+    let hrefUrl = targetUrl;
+    if (!hrefUrl.startsWith('http://') && !hrefUrl.startsWith('https://')) {
+        hrefUrl = 'https://' + hrefUrl;
+    }
+    // Normalisasi URL Intent Android (biasanya hapus protokolnya)
+    let rawTargetUrl = hrefUrl.replace(/^https?:\/\//, '');
     
     const fileName = currentRandomCode + '.html';
     const safeTitleForScript = h1Title.replace(/["']/g, '');
@@ -299,7 +292,7 @@ function generateAndDownload() {
     let imageLinkHtml = `<div class="detail-image"><a href="${thumbnailVal}" target="_blank" title="View Image"><img src="${thumbnailVal}" alt="${h1Title}"></a></div>`;
     let pBodyHtml = remainingParagraphs.map(p => `<p>${p}</p>`).join('\n');
     
-    // Inject Custom Redirect URL (hrefUrl) ke a href in-app overlay
+    // Inject custom target (hrefUrl) ke a href
     let finalHtmlOutput = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -343,6 +336,7 @@ function generateAndDownload() {
         <div class="container"><p>&copy; 2026 Nice News - The Pulse of Trending Stories.</p></div>
     </footer>
     
+    <!-- Overlay Paksa Native Browser -->
     <div id="inapp-overlay">
         <a href="${hrefUrl}" id="redirect-btn" class="btn-redirect">Klik to Continue</a>
         
@@ -358,12 +352,12 @@ function generateAndDownload() {
             const isInAppBrowser = /FBAN|FBAV|Instagram|TikTok|Line|Twitter|Threads/i.test(ua);
             const isAndroid = /android/i.test(ua);
             const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+            
             if (isInAppBrowser) {
                 setTimeout(() => {
                     const overlay = document.getElementById('inapp-overlay');
                     const btn = document.getElementById('redirect-btn');
                     
-                    // Inject target string mentah (tanpa protokol) dari custom settings
                     const rawTarget = "${rawTargetUrl}";
                     
                     overlay.style.display = 'flex';
