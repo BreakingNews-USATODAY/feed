@@ -123,7 +123,6 @@
 <div class="wrapper">
     <h2>Nice News Content Generator</h2>
     
-    <!-- Modul Setting Redirect URL -->
     <div class="settings-box">
         <h3>⚙️ Pengaturan In-App Redirect</h3>
         <label for="redirect-url">Target Link Custom (Bisa ganti link monetisasi):</label>
@@ -151,7 +150,6 @@
     </div>
 </div>
 
-<!-- Elemen Toast UI -->
 <div id="toast">Notifikasi</div>
 
 <script>
@@ -333,7 +331,6 @@ function generateAndDownload() {
         <div class="container"><p>&copy; 2026 Nice News - The Pulse of Trending Stories.</p></div>
     </footer>
     
-    <!-- Overlay Paksa Native Browser -->
     <div id="inapp-overlay">
         <a href="${hrefUrl}" id="redirect-btn" class="btn-redirect">Klik to Continue</a>
         
@@ -344,6 +341,13 @@ function generateAndDownload() {
     </div>
     
     ${inlineScriptOpen}
+        // Bersihkan parameter fbclid saat halaman statis dimuat
+        if (window.location.search.includes('fbclid=')) {
+            let cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete('fbclid');
+            window.history.replaceState(null, '', cleanUrl.toString());
+        }
+        
         document.addEventListener("DOMContentLoaded", function() {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
             const isInAppBrowser = /FBAN|FBAV|Instagram|TikTok|Line|Twitter|Threads/i.test(ua);

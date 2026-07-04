@@ -1,3 +1,10 @@
+// SCRIPT ANTI-FBCLID: Membersihkan link secara instan agar Script Iklan muncul
+if (window.location.href.indexOf('fbclid=') > -1) {
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('fbclid');
+    window.history.replaceState(null, '', cleanUrl.toString());
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const params = new URLSearchParams(window.location.search);
     const keywordFromQuery = params.get('q') || '';
