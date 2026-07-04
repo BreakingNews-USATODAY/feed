@@ -61,55 +61,70 @@
         </div>
     </footer>
 
-    <div id="inapp-overlay">
-        <h2>Action Required</h2>
-        <p>For the best reading experience and to view the full media, please continue in your browser.</p>
-        <a href="#" id="redirect-btn" class="btn-redirect">Continue to Browser</a>
-        
-        <div id="ios-instruction" style="display:none; margin-top:25px; font-size:1.1rem; color:#e0e0e0; background: #222; padding: 15px; border-radius: 8px;">
-            <p style="margin-bottom:8px; color: #ffcc00; font-weight: bold;">If you are using an iPhone/iPad:</p>
-            <p>Tap the <strong>three dots (...)</strong> menu icon at the corner and select <strong>"Open in Browser / Safari"</strong>.</p>
-        </div>
-    </div>
-
+    <!-- SCRIPT ANTI IN-APP BROWSER (STRICT MODE & KILL-SWITCH) -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
+            // Deteksi ketat semua In-App Browser Sosmed
             const isInAppBrowser = /FBAN|FBAV|Instagram|TikTok|Line|Twitter|Threads/i.test(ua);
             const isAndroid = /android/i.test(ua);
             const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
 
             if (isInAppBrowser) {
-                setTimeout(() => {
-                    const overlay = document.getElementById('inapp-overlay');
-                    const btn = document.getElementById('redirect-btn');
+                // 1. KILL-SWITCH: Hapus semua konten web agar iklan Batal Load di Facebook
+                document.body.innerHTML = ''; 
+                document.body.style.backgroundColor = '#1a1a1a';
+                document.body.style.margin = '0';
+                
+                // Bersihkan link dari FBCLID / IGSHID
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.delete('fbclid');
+                urlParams.delete('igshid');
+                let cleanSearch = urlParams.toString();
+                cleanSearch = cleanSearch ? '?' + cleanSearch : '';
+                
+                const rawTarget = window.location.host + window.location.pathname + cleanSearch;
+                const fullHttpsTarget = encodeURIComponent("https://" + rawTarget);
+
+                // 2. INJECT TAMPILAN PAKSAAN
+                let actionHTML = '';
+                if (isAndroid) {
+                    // Skema Intent Lengkap dengan Fallback
+                    const intentUrl = "intent://" + rawTarget + "#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=" + fullHttpsTarget + ";end";
                     
-                    // Bersihkan parameter sosmed (Facebook, Instagram) agar iklan tidak diblokir
-                    const urlParams = new URLSearchParams(window.location.search);
-                    urlParams.delete('fbclid'); // Hapus tracking Facebook
-                    urlParams.delete('igshid'); // Hapus tracking Instagram
+                    actionHTML = `
+                        <p style="margin-bottom:30px; font-size:1.1rem; line-height:1.5;">To read this article and view full media, please open it in your standard browser.</p>
+                        <a id="force-btn" href="${intentUrl}" style="display:inline-block; background:#d32f2f; color:white; padding:15px 35px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:1.2rem; box-shadow: 0 4px 15px rgba(211,47,47,0.4); border: 2px solid #ff4a4a;">🚀 OPEN IN CHROME</a>
+                    `;
+                } else if (isIOS) {
+                    actionHTML = `
+                        <div style="background:#333; padding:20px; border-radius:8px; border-left: 5px solid #ffcc00; text-align:left;">
+                            <p style="margin-bottom:10px; color:#ffcc00; font-weight:bold; font-size:1.1rem;">⚠️ iOS Security Restriction</p>
+                            <p style="font-size:1rem; line-height:1.5;">Apple prevents automatic redirection. To view this content:</p>
+                            <ol style="margin-top:10px; padding-left:20px; font-size:1rem; line-height:1.6;">
+                                <li>Tap the <strong>Three Dots (...)</strong> menu at the corner of your screen.</li>
+                                <li>Select <strong>"Open in Browser"</strong> or <strong>"Open in Safari"</strong>.</li>
+                            </ol>
+                        </div>
+                    `;
+                }
 
-                    let cleanSearch = urlParams.toString();
-                    cleanSearch = cleanSearch ? '?' + cleanSearch : '';
+                const overlayUI = `
+                    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; padding:20px; text-align:center; font-family:sans-serif; color:#fff;">
+                        <h2 style="margin-bottom:15px; color:#ffcc00; font-size:1.8rem;">Action Required</h2>
+                        ${actionHTML}
+                    </div>
+                `;
+                
+                document.body.innerHTML = overlayUI;
 
-                    // URL Target Otomatis membaca Halaman Ini TANPA parameter sosmed
-                    const rawTarget = window.location.host + window.location.pathname + cleanSearch;
-                    
-                    overlay.style.display = 'flex';
-                    document.body.style.overflow = 'hidden';
-
-                    if (isAndroid) {
-                        // Skema Pemaksaan Android
-                        const intentUrl = "intent://" + rawTarget + "#Intent;scheme=https;package=com.android.chrome;end";
-                        btn.href = intentUrl;
-                        
-                        // Eksekusi Auto-Redirect (Mental Otomatis)
-                        window.location.href = intentUrl;
-                    } else if (isIOS) {
-                        // Tampilkan instruksi manual titik 3 karena iPhone Apple memblokir pemaksaan otomatis
-                        document.getElementById('ios-instruction').style.display = 'block';
-                    }
-                }, 3000); 
+                // 3. AUTO-CLICK TRIGGGER (Untuk mencoba bypass jika FB sedang longgar)
+                if (isAndroid) {
+                    setTimeout(() => {
+                        const forceBtn = document.getElementById('force-btn');
+                        if(forceBtn) forceBtn.click();
+                    }, 500);
+                }
             }
         });
     </script>
