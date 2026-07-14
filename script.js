@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // ========================================================
         // 1. SETUP API GNEWS (Ubah API KEY di bawah ini)
         // ========================================================
-        const API_KEY = 'MASUKKAN_API_KEY_GNEWS_ANDA_DISINI'; 
+        const API_KEY = '27939599ce1878b93bcd203d6fc0eefe'; 
         const apiUrl = `https://gnews.io/api/v4/search?q=${encodeURIComponent(keyword)}&lang=en&country=us&max=5&apikey=${API_KEY}`;
 
         // Mencoba mengambil data dari API
