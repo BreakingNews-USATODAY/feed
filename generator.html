@@ -123,12 +123,11 @@
 <div class="wrapper">
     <h2>Nice News Content Generator</h2>
     
-    <!-- Modul Setting Redirect URL -->
     <div class="settings-box">
-        <h3>  Pengaturan In-App Redirect</h3>
+        <h3>🚀 Pengaturan In-App Redirect</h3>
         <label for="redirect-url">Target Link Custom (Bisa ganti link monetisasi):</label>
         <input type="text" id="redirect-url" placeholder="Opsional: https://link-monetisasi-anda.com/..." autocomplete="off">
-        <div class="note"><strong>Otomatis tersimpan.</strong> Jika dikosongkan, script otomatis mengarahkan user ke <strong>Link Artikel (Preview)</strong> ini sendiri di browser Chrome.</div>
+        <div class="note"><strong>Otomatis tersimpan.</strong> Jika dikosongkan, tombol 'Continue' akan mengarahkan user ke <strong>Link Artikel</strong> ini sendiri.</div>
     </div>
     
     <div class="form-group">
@@ -142,16 +141,15 @@
         <textarea id="content" placeholder="Baris Paling Atas Pasti Judul Berita (H1)&#10;&#10;Paragraf Pertama ditulis di sini...&#10;&#10;Paragraf Kedua ditulis di sini..."></textarea>
     </div>
     
-    <button onclick="generateAndDownload()">  Generate HTML Statis</button>
+    <button onclick="generateAndDownload()">⚡ Generate HTML Statis</button>
 
     <div id="rec-box" class="recommendation-box">
         <label for="share-preview">Konten Siap Share (Copy & Paste):</label>
         <textarea id="share-preview" readonly></textarea>
-        <button class="copy-btn" onclick="copyPreview()">  Copy Konten & Link</button>
+        <button class="copy-btn" onclick="copyPreview()">📋 Copy Konten & Link</button>
     </div>
 </div>
 
-<!-- Elemen Toast UI -->
 <div id="toast">Notifikasi</div>
 
 <script>
@@ -264,17 +262,41 @@ function generateAndDownload() {
     const remainingParagraphs = lines.slice(1);
     
     currentRandomCode = generateRandomCode(12);
+    
+    // URL Artikel (Link Siap Share)
     const articleFullUrl = baseDomain + currentRandomCode;
     updatePreviewUrl(textOnlyH1Title, articleFullUrl);
     
+    // ========================================================
+    // LOGIKA PENENTUAN LINK "CONTINUE"
+    // ========================================================
     let customInputUrl = document.getElementById("redirect-url").value.trim();
-    let targetUrl = customInputUrl ? customInputUrl : articleFullUrl;
     
-    let hrefUrl = targetUrl;
-    if (!hrefUrl.startsWith('http://') && !hrefUrl.startsWith('https://')) {
-        hrefUrl = 'https://' + hrefUrl;
+    // Jika custom link diisi, gunakan itu. Jika kosong, gunakan URL Artikel
+    let targetUrl = customInputUrl !== "" ? customInputUrl : articleFullUrl;
+    
+    // Pastikan URL memiliki prefix valid
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        targetUrl = 'https://' + targetUrl;
     }
-    let rawTargetUrl = hrefUrl.replace(/^https?:\/\//, '');
+    
+    let parsedUrl;
+    try {
+        parsedUrl = new URL(targetUrl);
+    } catch(e) {
+        parsedUrl = new URL("https://" + targetUrl.replace(/^https?:\/\//, ''));
+    }
+    
+    // intentTarget: Hanya berisi domain + path + query (Tanpa protocol)
+    let intentTarget = parsedUrl.host + parsedUrl.pathname + parsedUrl.search;
+    
+    // normalHref: Berisi Full URL beserta protocol
+    let normalHref = parsedUrl.href;
+    
+    // fallbackEncoded: URL yg di-encode untuk intent fallback
+    let fallbackEncoded = encodeURIComponent(normalHref);
+    // ========================================================
+    
     const fileName = currentRandomCode + '.html';
     
     const tagScript = '<scr' + 'ipt type="text/javascript" src="';
@@ -347,17 +369,16 @@ function generateAndDownload() {
             const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
             
             if (isInAppBrowser) {
-                const rawTargetUrl = "${rawTargetUrl}";
-                const fullHttpsTarget = encodeURIComponent("https://" + rawTargetUrl);
                 
                 let actionHTML = '';
                 if (isAndroid) {
-                    const intentUrl = "intent://" + rawTargetUrl + "#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=" + fullHttpsTarget + ";end";
+                    // Inject parameter URL Android Intent yang sudah diproses secara dinamis
+                    const intentUrl = "intent://${intentTarget}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallbackEncoded};end";
                     actionHTML = '<a href="' + intentUrl + '" class="ia-btn primary">Continue</a>';
                 } else if (isIOS) {
                     actionHTML = '<span style="font-size:13px; color:#666; text-align:right; font-weight:600;">Tap <b>...</b> (menu)<br>Open in Safari</span>';
                 } else {
-                    actionHTML = '<a href="https://' + rawTargetUrl + '" class="ia-btn primary">Continue</a>';
+                    actionHTML = '<a href="${normalHref}" class="ia-btn primary">Continue</a>';
                 }
 
                 const sheetCSS = '<style>.ia-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:999998;display:flex;align-items:flex-end;justify-content:center}.ia-sheet{width:100%;max-width:600px;background:#fff;border-radius:20px 20px 0 0;padding:25px 20px;font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;box-shadow:0 -4px 15px rgba(0,0,0,0.1);animation:slideUp 0.3s ease-out forwards}@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}.ia-header{text-align:center;font-size:17px;font-weight:700;color:#050505;padding-bottom:15px;border-bottom:1px solid #ced0d4;margin-bottom:20px}.ia-row{display:flex;align-items:center;justify-content:space-between}.ia-left{display:flex;align-items:center;gap:15px}.ia-icon{width:42px;height:42px}.ia-text{font-size:16px;font-weight:600;color:#050505}.ia-btn{background:#e4e6eb;color:#050505;font-size:15px;font-weight:600;padding:10px 24px;border-radius:24px;text-decoration:none;transition:0.2s}.ia-btn.primary{background:#0866ff;color:#fff}</style>';
